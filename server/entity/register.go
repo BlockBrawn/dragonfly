@@ -18,6 +18,7 @@ var DefaultRegistry = conf.New([]world.EntityType{
 	ExperienceOrbType,
 	FallingBlockType,
 	FireworkType,
+	FishingHookType,
 	ItemType,
 	LightningType,
 	LingeringPotionType,
@@ -34,6 +35,7 @@ var conf = world.EntityRegistryConfig{
 	BottleOfEnchanting: NewBottleOfEnchanting,
 	EnderPearl:         NewEnderPearl,
 	FallingBlock:       NewFallingBlock,
+	FishingHook:        NewFishingHook,
 	Lightning:          NewLightning,
 	Firework: func(opts world.EntitySpawnOpts, firework world.Item, owner world.Entity, sidewaysVelocityMultiplier, upwardsAcceleration float64, attached bool) *world.EntityHandle {
 		return newFirework(opts, firework.(item.Firework), owner, sidewaysVelocityMultiplier, upwardsAcceleration, attached)

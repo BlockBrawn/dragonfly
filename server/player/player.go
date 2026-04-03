@@ -104,6 +104,8 @@ type playerData struct {
 
 	hunger *hungerManager
 
+	fishingHook *world.EntityHandle
+
 	once sync.Once
 
 	prevWorld *world.World
@@ -1377,8 +1379,12 @@ func (p *Player) HeldItems() (mainHand, offHand item.Stack) {
 // SetHeldItems sets items to the main hand and the off-hand of the player. The Stacks passed may be empty
 // (Stack.Empty()) to clear the held item.
 func (p *Player) SetHeldItems(mainHand, offHand item.Stack) {
+	oldMainHand, _ := p.HeldItems()
 	_ = p.inv.SetItem(int(*p.heldSlot), mainHand)
 	_ = p.offHand.SetItem(0, offHand)
+	if isFishingRod(oldMainHand) && !isFishingRod(mainHand) {
+		p.clearFishingHook()
+	}
 }
 
 // SetHeldSlot updates the held slot of the player to the slot provided. The
@@ -1404,6 +1410,10 @@ func (p *Player) SetHeldSlot(to int) error {
 	}
 	*p.heldSlot = uint32(to)
 	p.usingItem = false
+	mainHand, _ := p.HeldItems()
+	if !isFishingRod(mainHand) {
+		p.clearFishingHook()
+	}
 
 	for _, viewer := range p.viewers() {
 		viewer.ViewEntityItems(p)
@@ -1593,6 +1603,33 @@ func (p *Player) ReleaseItem() {
 	i.Item().(item.Releasable).Release(p, p.tx, useCtx, dur)
 	p.handleUseContext(useCtx)
 	p.updateState()
+}
+
+// FishingHook returns the fishing hook currently cast by the player, if any.
+func (p *Player) FishingHook() *world.EntityHandle {
+	return p.fishingHook
+}
+
+// SetFishingHook sets the fishing hook currently cast by the player.
+func (p *Player) SetFishingHook(hook *world.EntityHandle) {
+	p.fishingHook = hook
+}
+
+func (p *Player) clearFishingHook() {
+	if p.fishingHook == nil {
+		return
+	}
+
+	if ent, ok := p.fishingHook.Entity(p.tx); ok {
+		_ = ent.Close()
+	}
+
+	p.fishingHook = nil
+}
+
+func isFishingRod(mainHand item.Stack) bool {
+	_, ok := mainHand.Item().(item.FishingRod)
+	return ok
 }
 
 // canRelease returns whether the player can release the item currently held in the main hand.
@@ -2567,6 +2604,7 @@ func (p *Player) Tick(tx *world.Tx, current int64) {
 	p.session().SendHudUpdates()
 
 	if p.prevWorld != tx.World() && p.prevWorld != nil {
+		p.clearFishingHook()
 		p.Handler().HandleChangeWorld(p, p.prevWorld, tx.World())
 	}
 	p.prevWorld = tx.World()
@@ -3117,6 +3155,7 @@ func (p *Player) close(msg string) {
 }
 
 func (p *Player) quit(msg string) {
+	p.clearFishingHook()
 	p.h.HandleQuit(p)
 	p.h = NopHandler{}
 
