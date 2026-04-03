@@ -374,6 +374,7 @@ type EntityRegistryConfig struct {
 	Snowball           func(opts EntitySpawnOpts, owner Entity) *EntityHandle
 	SplashPotion       func(opts EntitySpawnOpts, t any, owner Entity) *EntityHandle
 	FishingHook        func(opts EntitySpawnOpts, owner Entity) *EntityHandle
+	WindCharge         func(opts EntitySpawnOpts, owner Entity) *EntityHandle
 	Lightning          func(opts EntitySpawnOpts) *EntityHandle
 }
 
