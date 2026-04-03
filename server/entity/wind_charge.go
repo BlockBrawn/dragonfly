@@ -13,6 +13,10 @@ import (
 // knocked back by a wind charge burst.
 const windChargeBurstRadius = 2.5
 
+// windChargeMaxAffectedEntities caps the number of entities that can receive
+// knockback from a single wind charge burst, preventing abuse in crowded areas.
+const windChargeMaxAffectedEntities = 64
+
 // NewWindCharge creates a wind charge entity at a position with an owner
 // entity. Wind charges fly in a straight line (no gravity) and create a burst
 // of wind on impact that knocks back nearby entities and toggles certain
@@ -39,20 +43,32 @@ var windChargeConf = ProjectileBehaviourConfig{
 // burst radius, and toggles interactive blocks at the impact point.
 func windChargeBurst(e *Ent, tx *world.Tx, target trace.Result) {
 	pos := target.Position()
-	owner, _ := e.Behaviour().(*ProjectileBehaviour).Owner().Entity(tx)
 
 	// Deal flat 1 HP damage to the directly-hit entity.
+	// Owner is only resolved here since it is only needed for damage attribution.
 	if er, ok := target.(trace.EntityResult); ok {
 		if l, ok := er.Entity().(Living); ok {
+			owner, _ := e.Behaviour().(*ProjectileBehaviour).Owner().Entity(tx)
 			l.Hurt(1, ProjectileDamageSource{Projectile: e, Owner: owner})
 		}
 	}
 
-	// Apply knockback to all living entities within the burst radius. Impact
-	// scales with distance (closer = stronger) and is split into horizontal
-	// and vertical components.
-	box := e.H().Type().BBox(e).Translate(pos).Grow(windChargeBurstRadius)
-	for other := range tx.EntitiesWithin(box) {
+	// Apply knockback to all living entities within the burst radius. A sphere
+	// check (euclidean distance) is used instead of a raw AABB query so that
+	// entities in the corners of the bounding box are correctly excluded.
+	// Impact scales with distance (closer = stronger) and is split into
+	// horizontal and vertical components.
+	searchBox := cube.Box(
+		pos[0]-windChargeBurstRadius,
+		pos[1]-windChargeBurstRadius,
+		pos[2]-windChargeBurstRadius,
+		pos[0]+windChargeBurstRadius,
+		pos[1]+windChargeBurstRadius,
+		pos[2]+windChargeBurstRadius,
+	)
+
+	affected := 0
+	for other := range tx.EntitiesWithin(searchBox) {
 		if other.H() == e.H() {
 			continue
 		}
@@ -60,12 +76,25 @@ func windChargeBurst(e *Ent, tx *world.Tx, target trace.Result) {
 		if !ok {
 			continue
 		}
+
 		entityPos := other.Position()
 		dist := entityPos.Sub(pos).Len()
+
+		// Spherical radius check: skip entities outside the actual burst sphere.
+		if dist > windChargeBurstRadius {
+			continue
+		}
+
 		impact := 1.3 - dist/windChargeBurstRadius
 		if impact <= 0 {
 			continue
 		}
+
+		// Cap the number of entities affected to prevent server abuse.
+		if affected >= windChargeMaxAffectedEntities {
+			break
+		}
+		affected++
 
 		vel := l.Velocity()
 		// If the entity is directly above the impact, apply a flat upward
@@ -84,11 +113,20 @@ func windChargeBurst(e *Ent, tx *world.Tx, target trace.Result) {
 		l.SetVelocity(vel)
 	}
 
-	// Toggle interactive blocks at the impact point.
+	// Toggle interactive blocks at the impact point. The Activate call is
+	// guarded so that only blocks explicitly implementing WindChargeAffected
+	// are toggled, and nil arguments are safe because WindChargeAffected
+	// implementations must handle a nil player/context by contract.
 	if r, ok := target.(trace.BlockResult); ok {
-		pos := r.BlockPosition()
-		if b, ok := tx.Block(pos).(block.WindChargeAffected); ok {
-			b.Activate(pos, r.Face(), tx, nil, nil)
+		blockPos := r.BlockPosition()
+		face := r.Face()
+		if b, ok := tx.Block(blockPos).(block.WindChargeAffected); ok {
+			func() {
+				defer func() {
+					recover() // guard against WindChargeAffected implementations that do not handle nil args
+				}()
+				b.Activate(blockPos, face, tx, nil, nil)
+			}()
 		}
 	}
 }
