@@ -600,7 +600,7 @@ func (p *Player) Hurt(dmg float64, src world.DamageSource) (float64, bool) {
 	if p.Handler().HandleHurt(ctx, &damageLeft, immune, &immunity, src); ctx.Cancelled() {
 		return 0, false
 	}
-	p.SetAttackImmunity(immunity, totalDamage)
+	p.setAttackImmunity(immunity, totalDamage)
 
 	if a := p.Absorption(); a > 0 {
 		p.SetAbsorption(a - damageLeft)
@@ -734,8 +734,8 @@ func (p *Player) knockBack(src mgl64.Vec3, force, height float64) {
 	p.SetVelocity(velocity.Mul(1 - p.Armour().KnockBackResistance()))
 }
 
-// SetAttackImmunity sets the duration the player is immune to entity attacks.
-func (p *Player) SetAttackImmunity(d time.Duration, dmg float64) {
+// setAttackImmunity sets the duration the player is immune to entity attacks.
+func (p *Player) setAttackImmunity(d time.Duration, dmg float64) {
 	p.immuneUntil = time.Now().Add(d)
 	p.lastDamage = dmg
 }
