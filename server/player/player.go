@@ -734,8 +734,8 @@ func (p *Player) knockBack(src mgl64.Vec3, force, height float64) {
 	p.SetVelocity(velocity.Mul(1 - p.Armour().KnockBackResistance()))
 }
 
-// setAttackImmunity sets the duration the player is immune to entity attacks.
-func (p *Player) setAttackImmunity(d time.Duration, dmg float64) {
+// SetAttackImmunity sets the duration the player is immune to entity attacks.
+func (p *Player) SetAttackImmunity(d time.Duration, dmg float64) {
 	p.immuneUntil = time.Now().Add(d)
 	p.lastDamage = dmg
 }
