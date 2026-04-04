@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/df-mc/dragonfly/server/world"
+	"github.com/df-mc/dragonfly/server/world/sound"
 )
 
 type fishingRodUser interface {
@@ -17,7 +18,7 @@ type FishingRod struct{}
 func (FishingRod) DurabilityInfo() DurabilityInfo {
 	return DurabilityInfo{
 		MaxDurability: 384,
-		BrokenItem:    func() Stack { return Stack{} },
+		BrokenItem:    simpleItem(Stack{}),
 	}
 }
 
@@ -27,6 +28,14 @@ func (FishingRod) MaxCount() int {
 
 func (FishingRod) Rod() bool {
 	return true
+}
+
+func (FishingRod) EnchantmentValue() int {
+	return 1
+}
+
+func (FishingRod) FuelInfo() FuelInfo {
+	return newFuelInfo(time.Second * 10)
 }
 
 func (FishingRod) Cooldown() time.Duration {
@@ -45,17 +54,20 @@ func (FishingRod) Use(tx *world.Tx, user User, ctx *UseContext) bool {
 		}
 		p.SetFishingHook(nil)
 		ctx.DamageItem(1)
-
 		return true
 	}
 
 	create := tx.World().EntityRegistry().Config().FishingHook
-	opts := world.EntitySpawnOpts{Position: eyePosition(user), Velocity: user.Rotation().Vec3().Mul(1.3)}
+	opts := world.EntitySpawnOpts{
+		Position: eyePosition(user),
+		Velocity: user.Rotation().Vec3().Mul(1.3),
+	}
 	handle := create(opts, user)
 	tx.AddEntity(handle)
 	p.SetFishingHook(handle)
 
 	ctx.DamageItem(1)
+	tx.PlaySound(eyePosition(user), sound.ItemThrow{})
 	return true
 }
 
