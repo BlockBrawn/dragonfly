@@ -1,7 +1,7 @@
 package entity
 
 import (
-	"math/rand"
+	"math/rand/v2"
 
 	"github.com/df-mc/dragonfly/server/block/cube"
 	"github.com/df-mc/dragonfly/server/block/cube/trace"
@@ -48,7 +48,7 @@ func (b *FishingHookBehaviour) Tick(e *Ent, tx *world.Tx) *Movement {
 	}
 
 	m := b.ProjectileBehaviour.Tick(e, tx)
-	if e.Position()[1] < float64(tx.World().Range()[0]) && e.Age()%10 == 0 {
+	if e.Position().Y() < float64(tx.World().Range().Min()) && e.Age()%10 == 0 {
 		_ = e.Close()
 	}
 	return m
@@ -60,9 +60,7 @@ func NewFishingHook(opts world.EntitySpawnOpts, owner world.Entity) *world.Entit
 		rand.Float64(),
 		rand.Float64(),
 	}.Mul(0.007499999832361937)).Mul(1.3)
-	vel[0] += opts.Velocity[0]
-	vel[2] += opts.Velocity[2]
-	opts.Velocity = vel
+	opts.Velocity = vel.Add(mgl64.Vec3{opts.Velocity.X(), 0, opts.Velocity.Z()})
 
 	conf := FishingHookBehaviourConfig{
 		ProjectileBehaviourConfig: ProjectileBehaviourConfig{
@@ -85,20 +83,27 @@ func fishingHookHit(e *Ent, tx *world.Tx, result trace.Result) {
 	owner, _ := ownerHandle.Entity(tx)
 
 	if res, ok := result.(trace.EntityResult); ok {
-		if l, ok := res.Entity().(Living); ok {
-			if _, vulnerable := l.Hurt(0.0, ProjectileDamageSource{Projectile: e, Owner: owner}); vulnerable {
-				if owner != nil {
-					ownerRot, ok1 := owner.(interface{ Rotation() cube.Rotation })
-					lRot, ok2 := l.(interface{ Rotation() cube.Rotation })
-					if ok1 && ok2 && ownerRot.Rotation().Vec3().Dot(lRot.Rotation().Vec3()) > 0 {
-						// Pull back the target.
-						l.KnockBack(l.Position().Add(e.Velocity()), 0.230, 0.372)
-					} else {
-						// Push back the target.
-						l.KnockBack(l.Position().Sub(e.Velocity()), 0.374, 0.372)
-					}
-				}
-			}
+		l, ok := res.Entity().(Living)
+		if !ok {
+			return
+		}
+		if _, vulnerable := l.Hurt(0.0, ProjectileDamageSource{Projectile: e, Owner: owner}); !vulnerable {
+			return
+		}
+		if owner == nil {
+			return
+		}
+
+		ownerPos := owner.(interface{ Position() mgl64.Vec3 }).Position()
+		targetPos := l.Position()
+
+		dirToTarget := targetPos.Sub(ownerPos)
+
+		if e.Velocity().Dot(dirToTarget) > 0 {
+			pullOrigin := targetPos.Add(dirToTarget.Normalize())
+			l.KnockBack(pullOrigin, 0.230, 0.372)
+		} else {
+			l.KnockBack(ownerPos, 0.374, 0.372)
 		}
 	}
 }
@@ -130,4 +135,5 @@ func (fishingHookType) DecodeNBT(_ map[string]any, data *world.EntityData) {
 	}
 	conf.Apply(data)
 }
+
 func (fishingHookType) EncodeNBT(*world.EntityData) map[string]any { return nil }
