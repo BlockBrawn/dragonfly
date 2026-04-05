@@ -17,6 +17,7 @@ var DefaultRegistry = conf.New([]world.EntityType{
 	EnderPearlType,
 	ExperienceOrbType,
 	FallingBlockType,
+	FallingTextType,
 	FireworkType,
 	ItemType,
 	LightningType,
