@@ -7,8 +7,8 @@ import (
 )
 
 // NewFallingText creates and returns a new Text entity with the text and position provided with gravity.
-func NewFallingText(text string, pos mgl64.Vec3) *world.EntityHandle {
-	return world.EntitySpawnOpts{Position: pos, NameTag: text}.New(FallingTextType, textConf)
+func NewFallingText(text string, pos mgl64.Vec3, vel mgl64.Vec3) *world.EntityHandle {
+	return world.EntitySpawnOpts{Position: pos, Velocity: vel, NameTag: text}.New(FallingTextType, textConf)
 }
 
 var fallingTextConf = FallingBlockBehaviourConfig{
