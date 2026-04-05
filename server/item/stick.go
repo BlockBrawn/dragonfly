@@ -14,3 +14,7 @@ func (Stick) FuelInfo() FuelInfo {
 func (s Stick) EncodeItem() (name string, meta int16) {
 	return "minecraft:stick", 0
 }
+
+func (s Stick) EnchantmentValue() int {
+	return 1
+}
