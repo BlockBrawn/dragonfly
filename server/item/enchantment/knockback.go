@@ -42,7 +42,6 @@ func (knockback) CompatibleWithEnchantment(item.EnchantmentType) bool {
 }
 
 // CompatibleWithItem ...
-func (knockback) CompatibleWithItem(i world.Item) bool {
-	t, ok := i.(item.Tool)
-	return ok && t.ToolType() == item.TypeSword
+func (knockback) CompatibleWithItem(_ world.Item) bool {
+	return true
 }
