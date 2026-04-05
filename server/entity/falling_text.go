@@ -1,6 +1,7 @@
 package entity
 
 import (
+	"github.com/df-mc/dragonfly/server/block"
 	"github.com/df-mc/dragonfly/server/block/cube"
 	"github.com/df-mc/dragonfly/server/world"
 	"github.com/go-gl/mathgl/mgl64"
@@ -8,12 +9,13 @@ import (
 
 // NewFallingText creates and returns a new Text entity with the text and position provided with gravity.
 func NewFallingText(text string, pos mgl64.Vec3, vel mgl64.Vec3) *world.EntityHandle {
-	return world.EntitySpawnOpts{Position: pos, Velocity: vel, NameTag: text}.New(FallingTextType, textConf)
+	return world.EntitySpawnOpts{Position: pos, Velocity: vel, NameTag: text}.New(FallingTextType, fallingTextConf)
 }
 
 var fallingTextConf = FallingBlockBehaviourConfig{
 	Gravity: 0.04,
 	Drag:    0.02,
+	Block:   block.Air{},
 }
 
 // FallingTextType is a world.EntityType implementation for Text.
