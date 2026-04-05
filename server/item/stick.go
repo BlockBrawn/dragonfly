@@ -16,5 +16,5 @@ func (s Stick) EncodeItem() (name string, meta int16) {
 }
 
 func (s Stick) EnchantmentValue() int {
-	return 1
+	return 10
 }
