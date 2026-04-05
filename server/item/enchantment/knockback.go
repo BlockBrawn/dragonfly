@@ -42,6 +42,6 @@ func (knockback) CompatibleWithEnchantment(item.EnchantmentType) bool {
 }
 
 // CompatibleWithItem ...
-func (knockback) CompatibleWithItem(i world.Item) bool {
+func (knockback) CompatibleWithItem(_ world.Item) bool {
 	return true
 }
