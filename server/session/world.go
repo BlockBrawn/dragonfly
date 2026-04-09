@@ -128,6 +128,7 @@ func (s *Session) ViewEntity(e world.Entity) {
 			})
 			return
 		case entity.TextType:
+			metadata[protocol.EntityDataKeyVariant] = int32(world.BlockRuntimeID(block.Air{}))
 		case entity.FallingTextType:
 			metadata[protocol.EntityDataKeyVariant] = int32(world.BlockRuntimeID(block.Air{}))
 		case entity.FallingBlockType:
